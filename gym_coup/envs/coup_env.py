@@ -162,6 +162,7 @@ class Game:
         # Who is currently choosing an action?
         self.whose_action = p_first_turn
 
+        self.game_information = None
         self.turn_count = 0
 
         # Is it the beginning of a new turn?
@@ -515,6 +516,7 @@ class Game:
             # curr_player must lose a card
             # It is still their action
         else:
+            self.game_information = 'I Challenge Successful, the opponent does not have a Duke and will loss a card'
             opp_player.lost_challenge = True
 
             # Block failed, so complete the action
@@ -539,6 +541,7 @@ class Game:
             # curr_player must lose a card
             # It is still their action
         else:
+            self.game_information = 'I Challenge Successful, the opponent does not have a Duke and will loss a card'
             opp_player.lost_challenge = True
             # opp_player must lose a card
             self.next_player_action()
@@ -560,6 +563,8 @@ class Game:
             # curr_player must lose a card
             # After _exchange_return is called it will switch to their action
         else:
+            self.game_information = 'I Challenge Successful, the opponent does not have a Ambassador and will loss a card'
+
             opp_player.lost_challenge = True
             # opp_player must lose a card
             self.next_player_action()
@@ -576,8 +581,10 @@ class Game:
             curr_player.cards[0].is_face_up = True
             curr_player.cards[1].is_face_up = True
             self.game_over = True
+            self.game_information = f'Player {opp_player.id} wins the game'
             logger.info('Game Over')
         else:
+            self.game_information = 'I Challenge Successful, the opponent does not have a Assassin and will loss a card'
             opp_player.lost_challenge = True
 
             # Coins spent are returned in this one case
@@ -601,8 +608,11 @@ class Game:
             # opp_player loses the game
             # Lose 1 card for assassination
             # and 1 card for losing challenge
+            self.game_information = 'I Challenge Successful, the opponent does not have a Contessa and will loss a card'
+
             opp_player.cards[0].is_face_up = True
             opp_player.cards[1].is_face_up = True
+            self.game_information = f'Player {curr_player.id} wins the game'
             self.game_over = True
             logger.info('Game Over')
 
@@ -623,6 +633,7 @@ class Game:
             # curr_player must lose a card
             # It is still their action
         else:
+            self.game_information = 'I Challenge Successful, the opponent does not have a Captain and will loss a card'
             opp_player.lost_challenge = True
             # opp_player must lose a card
             self.next_player_action()
@@ -645,6 +656,8 @@ class Game:
             # curr_player must lose a card
             # It is still their action
         else:
+            self.game_information = 'I Challenge Successful, the opponent does not have a Captain or Ambassador and will loss a card'
+
             opp_player.lost_challenge = True
 
             # Block failed, so complete the action
@@ -658,6 +671,7 @@ class Game:
     def _challenge_fail_replace_card(self, card_val):
         # If the challenged player actually had the correct card,
         # shuffle it into the deck and give them a new card
+        self.game_information = f'I Challenge failed, the opponent shows and replaces card {Card.names[card_val]}, I will lose a card'
         logger.info(f'Showing and replacing card {Card.names[card_val]}')
         p = self.get_opp_player()
         for i in range(len(p.cards)):
@@ -673,6 +687,7 @@ class Game:
 
     def _lose_card(self, card_ind):
         curr_player = self.get_curr_action_player()
+        opp_player = self.get_opp_player()
         if curr_player.cards[card_ind].is_face_up:
             raise RuntimeError(f'Cannot lose a card that is already face up')
 
@@ -684,6 +699,7 @@ class Game:
         self.game_over = not (False in [x.is_face_up for x in curr_player.cards])
 
         if self.game_over:
+            self.game_information = f'Player {opp_player.id} wins the game'
             logger.info('Game Over')
 
         self.next_player_turn()
@@ -695,6 +711,12 @@ class Game:
     def lose_card_2(self):
         self.get_curr_action_player().last_action = LOSE_CARD_2
         self._lose_card(1)
+
+    def call_system_info(self):
+        tmp = self.game_information
+        self.game_information = None
+        return tmp
+
 
 
 
@@ -752,6 +774,7 @@ class CoupEnv(gym.Env):
         self.is_partial_obs = is_partial_obs
         self.game = None
         self.cumulative_rewards = None
+
 
         self.action_space = gym.spaces.Discrete(len(self.actions))
 
@@ -837,6 +860,8 @@ class CoupEnv(gym.Env):
                 self.cumulative_rewards[p],
                 self.game.game_over,
                 dict())
+
+
 
     def render(self, mode='human'):
         if self.game is not None:
